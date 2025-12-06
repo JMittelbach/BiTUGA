@@ -1,3 +1,6 @@
 [submodule "src/external/bcalm"]
 	path = src/external/bcalm
 	url = https://github.com/GATB/bcalm.git
+[submodule "src/external/kmc"]
+	path = src/external/kmc
+	url = https://github.com/refresh-bio/KMC.git
