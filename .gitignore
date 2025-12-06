@@ -1,0 +1,24 @@
+# Build and binary directories
+/build/
+/bin/
+
+# CMake / Make artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Compiled object and library files
+**/*.o
+**/*.obj
+**/*.a
+**/*.so
+**/*.dylib
+**/*.tbd
+**/*.dll
+**/*.pdb
+
+# Temporary and log files
+**/*.tmp
+**/*.log
+**/*.swp
+**/*.swo
