@@ -1,0 +1,3 @@
+[submodule "src/external/bcalm"]
+	path = src/external/bcalm
+	url = https://github.com/GATB/bcalm.git
