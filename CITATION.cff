@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Mittelbach"
+  given-names: "Jannes"
+- family-names: "Kersten"
+  given-names: "Birgit"
+- family-names: "Kurtz"
+  given-names: "Stefan"
+title: "BiTUGA: scalable prevalence-based unitig association testing for binary traits in large genomes"
+version: 1.0.0
+date-released: 2025-12-23
+url: "https://github.com/JMittelbach/BiTUGA"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Mittelbach"
+    given-names: "Jannes"
+  - family-names: "Kersten"
+    given-names: "Birgit"
+  - family-names: "Kurtz"
+    given-names: "Stefan"
+  title: "BiTUGA: scalable prevalence-based unitig association testing for binary traits in large genomes"
+  year: 2025
+  journal: "Manuscript submitted to G3: Genes|Genomes|Genetics"
+  status: submitted
