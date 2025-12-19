@@ -1,4 +1,4 @@
-# BiTUGA: Scalable Prevalence-Based Unitig Association Testing
+# BiTUGA: Scalable Prevalence-Based Unitig Association Testing for binary traits
 
 **BiTUGA** is a scalable workflow designed for **prevalence-based unitig association testing**, specifically optimized for **binary traits** in large and highly repetitive genomes.
 
@@ -37,7 +37,7 @@ pip install matplotlib
 # 4) Inspect options
 ./BiTUGA.sh --help
 
-# Minimal example
+# Minimal execution example
 ./BiTUGA.sh \
   --input-dir data/reads \
   --trait-info trait_info/trait_info_populus.tsv \
@@ -75,18 +75,16 @@ BiTUGA/
 - `--start-pass` / `--end-pass` rerun subsets; restart from earliest affected pass after param changes  
 Trait table: two columns (sample ID, trait/binary label); see `trait_info/` examples.
 
-## Pipeline passes (single-node)
-Each pass notes purpose, inputs, knobs, outputs, issues, scaling.
+## Pipeline passes
 
-(possible problems)
-- **Pass I — KMC aggregation**  
+- **Pass I — k-mer aggregation**  
   - Does: count pooled k-mers.  
   - Takes: FASTQs; `--k`, `--ci/--cx`.  
   - Writes: KMC DBs (`results/kmc_*`).  
   - Tuning: OOM/disk → reduce threads or raise `--ci`.  
   - Scales with: total reads and k.
 
-- **Pass II — k-mer selection**  
+- **Pass II — k-mer filtering**  
   - Does: prevalence filtering (global/adaptive, group contrast).  
   - Takes: KMC outputs; trait table `--trait-info`.  
   - Knobs: `--prev-min/--prev-max`, `--group-min/--group-max`, `--group-contrast`.  
@@ -94,13 +92,13 @@ Each pass notes purpose, inputs, knobs, outputs, issues, scaling.
   - Tuning: over-filtering → relax thresholds.  
   - Scales with: number of unqiue k-mers.
 
-- **Pass III — unitigs**  
+- **Pass III — unitig assembly**  
   - Does: assemble unitigs (BCALM), optional filtering.  
   - Takes: filtered k-mers; `--k`; length/entropy filters.  
   - Writes: unitigs FASTA (`results/unitigs*.fa`).  
   - Scales with: retained k-mers.
 
-- **Pass IV — unitig verification**  
+- **Pass IV — unitig presence verification**  
   - Does: map unitigs (MiniMatcher) and compute coverage tables.  
   - Takes: unitigs FASTA, reference FASTA; `--nt-threads`, `--query-split-size` (reads/batch).  
   - Knobs: `--query-split-size` (powers of two), seed/rev-comp options, `--min-mem-length` (default k+1), replicate caps.  
@@ -108,7 +106,7 @@ Each pass notes purpose, inputs, knobs, outputs, issues, scaling.
   - Tuning: OOM/time → lower `--query-split-size`.  
   - Scales with: unitig count and reference size.
 
-- **Pass V — Fisher tests**  
+- **Pass V — Fisher's tests**  
   - Does: association testing and FASTA export of significant unitigs.  
   - Takes: coverage tables; trait table.  
   - Knobs: `--fdr` (`auto`, `bh`, `storey`, `none`), `--fdr-alpha`, `--raw-p-threshold`, prevalence deltas.  
