@@ -69,14 +69,11 @@ kmc:
 	@cd $(KMC_SRC_DIR) && git checkout . > /dev/null 2>&1 || true
 	
 	@echo "=> [KMC] Patching headers for universal compatibility..."
-	# Patch 1: Tokenizer headers
 	@perl -pi -e 's/#include "defs.h"/#include "defs.h"\n#include <vector>\n#include <regex>/' $(KMC_SRC_DIR)/kmc_tools/tokenizer.h
 	
-	# Patch 2: GCC-Header in kmc_core/defs.h
 	@perl -pi -e 's/#include <ext\/algorithm>/#include <algorithm>/' $(KMC_SRC_DIR)/kmc_core/defs.h
 	@perl -pi -e 's/using __gnu_cxx::copy_n;/using std::copy_n;/' $(KMC_SRC_DIR)/kmc_core/defs.h
 	
-	# Patch 3: GCC-Header in kmc_api/kmer_defs.h (Das ist der neue Fehler!)
 	@perl -pi -e 's/#include <ext\/algorithm>/#include <algorithm>/' $(KMC_SRC_DIR)/kmc_api/kmer_defs.h
 	@perl -pi -e 's/using __gnu_cxx::copy_n;/using std::copy_n;/' $(KMC_SRC_DIR)/kmc_api/kmer_defs.h
 	
