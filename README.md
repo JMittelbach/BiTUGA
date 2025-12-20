@@ -44,6 +44,15 @@ pip install matplotlib
   --out-dir runs/run1 \
   --threads 32 \
   --mem-gb 100
+
+# Compiler Definitions
+
+By default, the code is compiled using clang and clang++. You can
+specify your favorite compiler by setting the environment variables
+CC and CXX, like for example
+
+export CC=/opt/homebrew/bin/gcc-15
+export CXX=/opt/homebrew/bin/g++-15
 ```
 
 ## Conceptual Overview
