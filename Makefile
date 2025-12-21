@@ -22,21 +22,27 @@ endif
 
 KMC_SRC_DIR  := src/external/kmc
 KMC_MAKEFILE := patches/kmc/Makefile
+M2S_DIR      := src/merge2stats
+MM_DIR       := src/MiniMatcher
+POST_MM_DIR  := src/postprocess_MiniMatcher
 
 .PHONY: all clean distclean help
-.PHONY: bcalm clean_bcalm
-.PHONY: kmc clean_kmc
+.PHONY: bcalm clean_bcalm kmc clean_kmc
+.PHONY: merge2stats minimatcher postprocess_mm
 
-all: bcalm kmc
+all: bcalm kmc merge2stats minimatcher postprocess_mm
+	@echo "=> [BiTUGA] All components built successfully."
 
 help:
 	@echo "Available commands:"
-	@echo "  make all         - Builds BCALM and KMC"
+	@echo "  make             - Builds everything (externals & own tools)"
+	@echo "  make clean       - Cleans all build files"
 	@echo "  make bcalm       - Builds only BCALM"
 	@echo "  make kmc         - Builds only KMC"
-	@echo "  make clean       - Cleans all build files"
-	@echo "  make clean_bcalm - Cleans only BCALM builds"
-	@echo "  make clean_kmc   - Cleans only KMC builds"
+	@echo "  make merge2stats - Builds merge2stats"
+	@echo "  make minimatcher - Builds MiniMatcher"
+	@echo "  make postprocess_mm - Builds postprocess_MiniMatcher"
+
 
 bcalm: $(OUT_BIN_DIR)/bcalm
 
@@ -67,33 +73,44 @@ kmc:
 	@echo "=> [KMC] Building KMC..."
 	@git submodule update --init --recursive
 	@cd $(KMC_SRC_DIR) && git checkout . > /dev/null 2>&1 || true
-	
-	@echo "=> [KMC] Patching headers for universal compatibility..."
+	@echo "=> [KMC] Patching headers..."
 	@perl -pi -e 's/#include "defs.h"/#include "defs.h"\n#include <vector>\n#include <regex>/' $(KMC_SRC_DIR)/kmc_tools/tokenizer.h
-	
 	@perl -pi -e 's/#include <ext\/algorithm>/#include <algorithm>/' $(KMC_SRC_DIR)/kmc_core/defs.h
 	@perl -pi -e 's/using __gnu_cxx::copy_n;/using std::copy_n;/' $(KMC_SRC_DIR)/kmc_core/defs.h
-	
 	@perl -pi -e 's/#include <ext\/algorithm>/#include <algorithm>/' $(KMC_SRC_DIR)/kmc_api/kmer_defs.h
 	@perl -pi -e 's/using __gnu_cxx::copy_n;/using std::copy_n;/' $(KMC_SRC_DIR)/kmc_api/kmer_defs.h
-	
 	@cp $(KMC_MAKEFILE) $(KMC_SRC_DIR)/Makefile
 	@mkdir -p $(KMC_SRC_DIR)/include
 	@mkdir -p $(KMC_SRC_DIR)/lib
 	@cp $(KMC_SRC_DIR)/kmc_api/*.h $(KMC_SRC_DIR)/include/ 2>/dev/null || true
 	@cd $(KMC_SRC_DIR) && $(MAKE)
-	@echo "=> [KMC] Build complete. Binaries are in $(OUT_BIN_DIR)"
+	@echo "=> [KMC] Build complete."
 
 clean_kmc:
 	-cd $(KMC_SRC_DIR) && git checkout .
 	-cd $(KMC_SRC_DIR) && git clean -fd
-	-$(RM) -f $(OUT_BIN_DIR)/kmc
-	-$(RM) -f $(OUT_BIN_DIR)/kmc_dump
-	-$(RM) -f $(OUT_BIN_DIR)/kmc_tools
-	-$(RM) -f $(OUT_BIN_DIR)/py_kmc_api.so
+	-$(RM) -f $(OUT_BIN_DIR)/kmc $(OUT_BIN_DIR)/kmc_dump $(OUT_BIN_DIR)/kmc_tools
+
+
+merge2stats:
+	@echo "=> [BiTUGA] Building merge2stats..."
+	$(MAKE) -C $(M2S_DIR)
+
+minimatcher:
+	@echo "=> [BiTUGA] Building MiniMatcher..."
+	$(MAKE) -C $(MM_DIR)
+
+postprocess_mm:
+	@echo "=> [BiTUGA] Building postprocess_MiniMatcher..."
+	$(MAKE) -C $(POST_MM_DIR)
+
 
 clean: clean_bcalm clean_kmc
+	@echo "=> [BiTUGA] Cleaning own tools..."
+	-$(MAKE) -C $(M2S_DIR) clean
+	-$(MAKE) -C $(MM_DIR) clean
+	-$(MAKE) -C $(POST_MM_DIR) clean
 	-$(RM) -rf $(OUT_BIN_DIR)/*.dSYM
-	@echo "=> All clean."
+	@echo "=> [BiTUGA] All clean."
 
 distclean: clean
