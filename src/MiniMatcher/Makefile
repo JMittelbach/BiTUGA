@@ -1,3 +1,4 @@
+GTTL=.
 include ${GTTL}/compile_flags.mk
 CFLAGS := $(filter-out -march=%,$(CFLAGS)) -mtune=generic
 ifeq ($(MACHINE),x86_64)
