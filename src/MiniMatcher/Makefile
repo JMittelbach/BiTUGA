@@ -15,20 +15,11 @@ $(BIN_TARGET): ${NT_MINI_MATCHER_OBJ}
 	@echo "${CXX} ${NT_MINI_MATCHER_OBJ} => $@"
 	@$(LD) ${LDFLAGS} ${NT_MINI_MATCHER_OBJ} -o $@ ${LDLIBS}
 
-
 include ${GTTL}/compile_targets.mk
-
 
 .PHONY:code_check
 code_check:
 	@code_check.py -wt `find . -name '*.[hc]pp'`
-	@${GTTL}/scripts/check_ifndef.py `find . -name '*.hpp'`
-
-.PHONY:tags
-tags:
-	@${GTTL}/scripts/ctags.sh `find . *.[hc]pp` \
-	  `find ${GTTL}/src -name '*.hpp'` \
-	  > $@
 
 .PHONY:clean
 clean:
