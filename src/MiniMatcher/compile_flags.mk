@@ -21,6 +21,14 @@ CXXFLAGS = -std=c++20
 # Linker flags
 LDFLAGS = -g -m64
 
+ifeq ($(SYSTEM),Darwin)
+  SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+  ifneq ($(SDKROOT),)
+    CPPFLAGS += -isysroot $(SDKROOT)
+    LDFLAGS += -Wl,-syslibroot,$(SDKROOT)
+  endif
+endif
+
 # Show compilation time
 ifeq ($(filter g++%,$(CXX)), $(CXX))
   ifneq ($(SYSTEM),Darwin)

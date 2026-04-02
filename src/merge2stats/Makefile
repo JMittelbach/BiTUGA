@@ -10,8 +10,11 @@ LDFLAGS   ?=
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-  SDKROOT    := $(shell xcrun --sdk macosx --show-sdk-path)
-  LDFLAGS    += -Wl,-syslibroot,$(SDKROOT)
+  SDKROOT    := $(shell xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+  ifneq ($(SDKROOT),)
+    CPPFLAGS += -isysroot $(SDKROOT)
+    LDFLAGS  += -Wl,-syslibroot,$(SDKROOT)
+  endif
   LDFLAGS    += -L/opt/homebrew/opt/zlib/lib -L/opt/homebrew/opt/bzip2/lib
   PTHREAD_LIB :=
 else

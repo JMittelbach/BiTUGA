@@ -41,6 +41,11 @@ STATIC_LFLAGS =
 PY_FLAGS =
 
 ifeq ($(D_OS),MACOS)
+    SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+    ifneq ($(SDKROOT),)
+        SYSROOT_CFLAGS := -isysroot $(SDKROOT)
+        SYSROOT_LFLAGS := -Wl,-syslibroot,$(SDKROOT)
+    endif
     STATIC_CFLAGS = -pthread
     STATIC_LFLAGS = -pthread    
     PY_FLAGS = -Wl,-undefined,dynamic_lookup -fPIC 
@@ -58,8 +63,8 @@ else
 endif
 
 
-CFLAGS  = -Wall -O3 -fsigned-char $(CPU_FLAGS) $(STATIC_CFLAGS) -std=c++14
-CLINK   = -lm $(STATIC_LFLAGS) -O3 -std=c++14
+CFLAGS  = -Wall -O3 -fsigned-char $(CPU_FLAGS) $(STATIC_CFLAGS) $(SYSROOT_CFLAGS) -std=c++14
+CLINK   = -lm $(STATIC_LFLAGS) $(SYSROOT_LFLAGS) -O3 -std=c++14
 PY_KMC_API_CFLAGS = $(PY_FLAGS) -Wall -shared -std=c++14 -O3
 
 KMC_CLI_OBJS = \
@@ -182,3 +187,5 @@ clean:
 	-rm -f $(KMC_CLI_DIR)/*.o
 	-rm -f $(PY_KMC_API_DIR)/*.o
 	-rm -f $(PY_KMC_API_DIR)/*.so
+	-rm -f $(LIB_KMC_CORE)
+	-rm -rf lib

@@ -1,7 +1,11 @@
 OUT_BIN_DIR := bin
 
-CC  ?= clang
-CXX ?= clang++
+export LC_ALL ?= C
+export LANG ?= C
+export LANGUAGE ?= C
+
+CC  ?= cc
+CXX ?= c++
 UNAME_S := $(shell uname -s)
 
 $(shell mkdir -p $(OUT_BIN_DIR))
@@ -15,7 +19,11 @@ BCALM_CFLAGS := -O3 -DH5_USE_110_API \
                 -Wno-incompatible-pointer-types
 
 ifeq ($(UNAME_S),Darwin)
-  BCALM_CMAKE_OSX := -DCMAKE_OSX_ARCHITECTURES=arm64
+  BCALM_CMAKE_OSX := -DCMAKE_OSX_ARCHITECTURES=$(shell uname -m)
+  BCALM_SDKROOT   := $(shell xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+  ifneq ($(BCALM_SDKROOT),)
+    BCALM_CMAKE_OSX += -DCMAKE_OSX_SYSROOT=$(BCALM_SDKROOT)
+  endif
 else
   BCALM_CMAKE_OSX :=
 endif
@@ -26,7 +34,7 @@ M2S_DIR      := src/merge2stats
 MM_DIR       := src/MiniMatcher
 POST_MM_DIR  := src/postprocess_MiniMatcher
 
-.PHONY: all clean distclean help
+.PHONY: all clean distclean help test
 .PHONY: bcalm clean_bcalm kmc clean_kmc
 .PHONY: merge2stats minimatcher postprocess_mm
 
@@ -36,12 +44,36 @@ all: bcalm kmc merge2stats minimatcher postprocess_mm
 help:
 	@echo "Available commands:"
 	@echo "  make             - Builds everything (externals & own tools)"
+	@echo "  make test        - Builds everything and runs smoke checks"
 	@echo "  make clean       - Cleans all build files"
 	@echo "  make bcalm       - Builds only BCALM"
 	@echo "  make kmc         - Builds only KMC"
 	@echo "  make merge2stats - Builds merge2stats"
 	@echo "  make minimatcher - Builds MiniMatcher"
 	@echo "  make postprocess_mm - Builds postprocess_MiniMatcher"
+
+test: all
+	@echo "=> [BiTUGA] Running smoke tests..."
+	@set -e; \
+	for exe in \
+	  $(OUT_BIN_DIR)/bcalm \
+	  $(OUT_BIN_DIR)/kmc \
+	  $(OUT_BIN_DIR)/kmc_dump \
+	  $(OUT_BIN_DIR)/kmc_tools \
+	  $(OUT_BIN_DIR)/merge2stats \
+	  $(OUT_BIN_DIR)/nt_mini_matcher.x \
+	  $(OUT_BIN_DIR)/postprocess_minimatcher \
+	  $(OUT_BIN_DIR)/merge_matches; do \
+	  if [ ! -x "$$exe" ]; then \
+	    echo "ERROR: Missing executable: $$exe"; \
+	    exit 1; \
+	  fi; \
+	done; \
+	help_out=$$(mktemp); \
+	bash ./BiTUGA.sh --help >$$help_out 2>&1 || true; \
+	grep -q "Usage:" $$help_out || { echo "ERROR: BiTUGA help output missing"; cat $$help_out; rm -f $$help_out; exit 1; }; \
+	rm -f $$help_out; \
+	echo "=> [BiTUGA] Smoke tests passed."
 
 
 bcalm: $(OUT_BIN_DIR)/bcalm
@@ -58,10 +90,51 @@ $(BCALM_BUILD_DIR)/stamp-build: $(BCALM_BUILD_DIR)/stamp-config
 
 $(BCALM_BUILD_DIR)/stamp-config:
 	@mkdir -p $(BCALM_BUILD_DIR)
-	@git submodule update --init --recursive
+	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	  git submodule update --init --recursive; \
+	else \
+	  echo "=> [BCALM] No git worktree detected, skipping submodule update."; \
+	fi
 	@cp -f $(BCALM_PATCH_FILE) $(BCALM_SRC_DIR)/gatb-core/gatb-core/CMakeLists.txt
 	@cd $(BCALM_BUILD_DIR) && \
-	  CC=$(CC) CXX=$(CXX) CFLAGS="$(BCALM_CFLAGS)" \
+	  bcalm_cc="$(CC)"; \
+	  bcalm_cxx="$(CXX)"; \
+	  tdir=$$(mktemp -d); \
+	  printf '%s\n' 'int main(void){return 0;}' > "$$tdir/probe.cpp"; \
+	  probe_ok=0; \
+	  if command -v "$$bcalm_cxx" >/dev/null 2>&1; then \
+	    if [ "$(UNAME_S)" = "Darwin" ]; then \
+	      "$$bcalm_cxx" -arch $(shell uname -m) "$$tdir/probe.cpp" -o "$$tdir/probe" >/dev/null 2>&1 && probe_ok=1; \
+	    else \
+	      "$$bcalm_cxx" "$$tdir/probe.cpp" -o "$$tdir/probe" >/dev/null 2>&1 && probe_ok=1; \
+	    fi; \
+	  fi; \
+	  if [ "$$probe_ok" -ne 1 ]; then \
+	    for cand in c++ clang++ g++ g++-15 g++-14 g++-13; do \
+	      command -v "$$cand" >/dev/null 2>&1 || continue; \
+	      if [ "$(UNAME_S)" = "Darwin" ]; then \
+	        "$$cand" -arch $(shell uname -m) "$$tdir/probe.cpp" -o "$$tdir/probe" >/dev/null 2>&1 || continue; \
+	      else \
+	        "$$cand" "$$tdir/probe.cpp" -o "$$tdir/probe" >/dev/null 2>&1 || continue; \
+	      fi; \
+	      bcalm_cxx="$$cand"; \
+	      case "$$cand" in \
+	        clang++) bcalm_cc=clang ;; \
+	        g++|g++-*) bcalm_cc=gcc ;; \
+	        c++) bcalm_cc=cc ;; \
+	      esac; \
+	      echo "=> [BCALM] Falling back to '$$bcalm_cxx' for BCALM configuration."; \
+	      probe_ok=1; \
+	      break; \
+	    done; \
+	  fi; \
+	  if [ "$$probe_ok" -ne 1 ]; then \
+	    echo "ERROR: No working C++ compiler found for BCALM."; \
+	    rm -rf "$$tdir"; \
+	    exit 1; \
+	  fi; \
+	  rm -rf "$$tdir"; \
+	  CC="$$bcalm_cc" CXX="$$bcalm_cxx" CFLAGS="$(BCALM_CFLAGS)" \
 	  cmake $(CURDIR)/$(BCALM_SRC_DIR) -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release $(BCALM_CMAKE_OSX) -Wno-dev
 	@touch $@
 
@@ -71,14 +144,26 @@ clean_bcalm:
 
 kmc:
 	@echo "=> [KMC] Building KMC..."
-	@git submodule update --init --recursive
-	@cd $(KMC_SRC_DIR) && git checkout . > /dev/null 2>&1 || true
-	@echo "=> [KMC] Patching headers..."
-	@perl -pi -e 's/#include "defs.h"/#include "defs.h"\n#include <vector>\n#include <regex>/' $(KMC_SRC_DIR)/kmc_tools/tokenizer.h
+	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	  git submodule update --init --recursive; \
+	else \
+	  echo "=> [KMC] No git worktree detected, skipping submodule update."; \
+	fi
+	@if [ -d "$(KMC_SRC_DIR)" ] && git -C "$(KMC_SRC_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	  git -C "$(KMC_SRC_DIR)" checkout . > /dev/null 2>&1 || true; \
+	fi
+	@echo "=> [KMC] Applying portability patches..."
+	@grep -q '^#include <regex>$$' $(KMC_SRC_DIR)/kmc_tools/tokenizer.h || \
+	  perl -0pi -e 's/#include "defs.h"/#include "defs.h"\n#include <vector>\n#include <regex>/' $(KMC_SRC_DIR)/kmc_tools/tokenizer.h
 	@perl -pi -e 's/#include <ext\/algorithm>/#include <algorithm>/' $(KMC_SRC_DIR)/kmc_core/defs.h
 	@perl -pi -e 's/using __gnu_cxx::copy_n;/using std::copy_n;/' $(KMC_SRC_DIR)/kmc_core/defs.h
 	@perl -pi -e 's/#include <ext\/algorithm>/#include <algorithm>/' $(KMC_SRC_DIR)/kmc_api/kmer_defs.h
 	@perl -pi -e 's/using __gnu_cxx::copy_n;/using std::copy_n;/' $(KMC_SRC_DIR)/kmc_api/kmer_defs.h
+	@perl -pi -e 's/inline void to_string_impl\(RandomAccessIterator iter\)(?: const)*/inline void to_string_impl(RandomAccessIterator iter) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
+	@perl -pi -e 's/inline std::string to_string\(\)(?: const)*/inline std::string to_string() const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
+	@perl -pi -e 's/inline void to_string\(char \*str\)(?: const)*/inline void to_string(char *str) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
+	@perl -pi -e 's/inline void to_long\(std::vector<uint64>& kmer\)(?: const)*/inline void to_long(std::vector<uint64>& kmer) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
+	@perl -pi -e 's/inline void to_string\(std::string &str\)(?: const)*/inline void to_string(std::string &str) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
 	@cp $(KMC_MAKEFILE) $(KMC_SRC_DIR)/Makefile
 	@mkdir -p $(KMC_SRC_DIR)/include
 	@mkdir -p $(KMC_SRC_DIR)/lib
@@ -87,8 +172,15 @@ kmc:
 	@echo "=> [KMC] Build complete."
 
 clean_kmc:
-	-cd $(KMC_SRC_DIR) && git checkout .
-	-cd $(KMC_SRC_DIR) && git clean -fd
+	@if [ -d "$(KMC_SRC_DIR)" ]; then \
+	  $(MAKE) -C "$(KMC_SRC_DIR)" clean; \
+	  if git -C "$(KMC_SRC_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	    git -C "$(KMC_SRC_DIR)" checkout .; \
+	    git -C "$(KMC_SRC_DIR)" clean -fd; \
+	  fi; \
+	else \
+	  echo "=> [KMC] Source tree not found under $(KMC_SRC_DIR); skipping."; \
+	fi
 	-$(RM) -f $(OUT_BIN_DIR)/kmc $(OUT_BIN_DIR)/kmc_dump $(OUT_BIN_DIR)/kmc_tools
 
 
