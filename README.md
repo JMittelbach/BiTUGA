@@ -31,10 +31,13 @@ cd BiTUGA
 # 2) Build native components
 make
 
-# 3) Install plotting dep (required for plots)
+# 3) Run smoke tests (optional but recommended)
+make test
+
+# 4) Install plotting dep (required for plots)
 pip install matplotlib
 
-# 4) Inspect options
+# 5) Inspect options
 ./BiTUGA.sh --help
 
 # Minimal execution example
