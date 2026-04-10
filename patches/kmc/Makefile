@@ -1,4 +1,4 @@
-all: kmc kmc_dump kmc_tools
+all: kmc kmc_tools
 
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
@@ -182,7 +182,7 @@ py_kmc_api: $(PY_KMC_API_OBJS) $(PY_KMC_API_OBJS)
 clean:
 	-rm -f $(KMC_MAIN_DIR)/*.o
 	-rm -f $(KMC_API_DIR)/*.o
-	-rm -f $(KMC_DUMP_DIR)/*.o
+	-@rm -f $(KMC_DUMP_DIR)/*.o
 	-rm -f $(KMC_TOOLS_DIR)/*.o
 	-rm -f $(KMC_CLI_DIR)/*.o
 	-rm -f $(PY_KMC_API_DIR)/*.o

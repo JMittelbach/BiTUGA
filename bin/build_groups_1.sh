@@ -48,7 +48,6 @@ case "${KMC_BIN}"    in /*) : ;; *) KMC_BIN="${ROOT_DIR}/${KMC_BIN}";; esac
 
 KMC="${KMC_BIN%/}/kmc"
 KMCT="${KMC_BIN%/}/kmc_tools"
-KMC_DUMP="${KMC_BIN%/}/kmc_dump"
 
 RESULTS_DIR="${OUTDIR_BASE%/}/results"
 POOLED_DIR="${RESULTS_DIR}/pooled_kmc_files"

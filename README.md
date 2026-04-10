@@ -24,20 +24,23 @@ BibTeX:
 
 ## Quick Start
 ```bash
-# 1) Clone with submodules
-git clone --recursive https://github.com/JMittelbach/BiTUGA.git
+# 1) Clone
+git clone https://github.com/JMittelbach/BiTUGA.git
 cd BiTUGA
 
-# 2) Build native components
+# 2) Initialize required submodules only
+make deps
+
+# 3) Build native components
 make
 
-# 3) Run smoke tests (optional but recommended)
+# 4) Run smoke tests (optional but recommended)
 make test
 
-# 4) Install plotting dep (required for plots)
+# 5) Install plotting dep (required for plots)
 pip install matplotlib
 
-# 5) Inspect options
+# 6) Inspect options
 ./BiTUGA.sh --help
 
 # Minimal execution example
@@ -47,13 +50,18 @@ pip install matplotlib
   --out-dir runs/run1 \
   --threads 32 \
   --mem-gb 100
+```
 
-# Compiler Definitions
+### What `make deps` does
+- Initializes only required submodules (non-recursive): `src/external/bcalm` and `src/external/kmc`.
+- Initializes only required nested BCALM dependency: `src/external/bcalm/gatb-core`.
+- Explicitly deinitializes/removes KMC's optional `3rd_party/cloudflare` submodule.
+- Keeps external versions pinned to the commits tracked by this repository.
 
-By default, the code is compiled using clang and clang++. You can
-specify your favorite compiler by setting the environment variables
-CC and CXX, like for example
-
+## Compiler Definitions (optional)
+By default, BiTUGA uses your system default toolchain (`cc`/`c++`).
+To force a specific compiler, set `CC` and `CXX` before `make`:
+```bash
 export CC=/opt/homebrew/bin/gcc-15
 export CXX=/opt/homebrew/bin/g++-15
 ```

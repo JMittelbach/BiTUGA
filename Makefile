@@ -34,7 +34,7 @@ M2S_DIR      := src/merge2stats
 MM_DIR       := src/MiniMatcher
 POST_MM_DIR  := src/postprocess_MiniMatcher
 
-.PHONY: all clean distclean help test
+.PHONY: all clean distclean help test deps
 .PHONY: bcalm clean_bcalm kmc clean_kmc
 .PHONY: merge2stats minimatcher postprocess_mm
 
@@ -44,6 +44,7 @@ all: bcalm kmc merge2stats minimatcher postprocess_mm
 help:
 	@echo "Available commands:"
 	@echo "  make             - Builds everything (externals & own tools)"
+	@echo "  make deps        - Initializes only required submodules"
 	@echo "  make test        - Builds everything and runs smoke checks"
 	@echo "  make clean       - Cleans all build files"
 	@echo "  make bcalm       - Builds only BCALM"
@@ -58,7 +59,6 @@ test: all
 	for exe in \
 	  $(OUT_BIN_DIR)/bcalm \
 	  $(OUT_BIN_DIR)/kmc \
-	  $(OUT_BIN_DIR)/kmc_dump \
 	  $(OUT_BIN_DIR)/kmc_tools \
 	  $(OUT_BIN_DIR)/merge2stats \
 	  $(OUT_BIN_DIR)/nt_mini_matcher.x \
@@ -75,6 +75,21 @@ test: all
 	rm -f $$help_out; \
 	echo "=> [BiTUGA] Smoke tests passed."
 
+deps:
+	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	  git -c submodule.recurse=false submodule update --init $(BCALM_SRC_DIR) $(KMC_SRC_DIR); \
+	  if [ -d "$(BCALM_SRC_DIR)" ]; then \
+	    git -C "$(BCALM_SRC_DIR)" -c submodule.recurse=false submodule update --init gatb-core; \
+	  fi; \
+	  if [ -d "$(KMC_SRC_DIR)" ] && git -C "$(KMC_SRC_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	    git -C "$(KMC_SRC_DIR)" submodule deinit -f -- 3rd_party/cloudflare > /dev/null 2>&1 || true; \
+	    rm -rf "$(KMC_SRC_DIR)/3rd_party/cloudflare"; \
+	    rm -rf ".git/modules/$(KMC_SRC_DIR)/modules/3rd_party/cloudflare"; \
+	  fi; \
+	else \
+	  echo "=> [BiTUGA] No git worktree detected, skipping dependency initialization."; \
+	fi
+
 
 bcalm: $(OUT_BIN_DIR)/bcalm
 
@@ -90,11 +105,7 @@ $(BCALM_BUILD_DIR)/stamp-build: $(BCALM_BUILD_DIR)/stamp-config
 
 $(BCALM_BUILD_DIR)/stamp-config:
 	@mkdir -p $(BCALM_BUILD_DIR)
-	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
-	  git submodule update --init --recursive; \
-	else \
-	  echo "=> [BCALM] No git worktree detected, skipping submodule update."; \
-	fi
+	@$(MAKE) deps
 	@cp -f $(BCALM_PATCH_FILE) $(BCALM_SRC_DIR)/gatb-core/gatb-core/CMakeLists.txt
 	@cd $(BCALM_BUILD_DIR) && \
 	  bcalm_cc="$(CC)"; \
@@ -141,16 +152,18 @@ $(BCALM_BUILD_DIR)/stamp-config:
 clean_bcalm:
 	-$(RM) -r $(BCALM_BUILD_DIR)
 	-$(RM) -f $(OUT_BIN_DIR)/bcalm
+	@if [ -d "$(BCALM_SRC_DIR)/gatb-core" ] && git -C "$(BCALM_SRC_DIR)/gatb-core" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	  git -C "$(BCALM_SRC_DIR)/gatb-core" checkout -- gatb-core/CMakeLists.txt >/dev/null 2>&1 || true; \
+	fi
 
 kmc:
 	@echo "=> [KMC] Building KMC..."
-	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
-	  git submodule update --init --recursive; \
-	else \
-	  echo "=> [KMC] No git worktree detected, skipping submodule update."; \
-	fi
+	@$(MAKE) deps
 	@if [ -d "$(KMC_SRC_DIR)" ] && git -C "$(KMC_SRC_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
 	  git -C "$(KMC_SRC_DIR)" checkout . > /dev/null 2>&1 || true; \
+	  git -C "$(KMC_SRC_DIR)" submodule deinit -f -- 3rd_party/cloudflare > /dev/null 2>&1 || true; \
+	  rm -rf "$(KMC_SRC_DIR)/3rd_party/cloudflare"; \
+	  rm -rf ".git/modules/$(KMC_SRC_DIR)/modules/3rd_party/cloudflare"; \
 	fi
 	@echo "=> [KMC] Applying portability patches..."
 	@grep -q '^#include <regex>$$' $(KMC_SRC_DIR)/kmc_tools/tokenizer.h || \
@@ -164,16 +177,17 @@ kmc:
 	@perl -pi -e 's/inline void to_string\(char \*str\)(?: const)*/inline void to_string(char *str) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
 	@perl -pi -e 's/inline void to_long\(std::vector<uint64>& kmer\)(?: const)*/inline void to_long(std::vector<uint64>& kmer) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
 	@perl -pi -e 's/inline void to_string\(std::string &str\)(?: const)*/inline void to_string(std::string &str) const/' $(KMC_SRC_DIR)/kmc_api/kmer_api.h
-	@cp $(KMC_MAKEFILE) $(KMC_SRC_DIR)/Makefile
+	@perl -pi -e 's@#include \"\.\./3rd_party/cloudflare/zlib\.h\"@#include <zlib.h>@' $(KMC_SRC_DIR)/kmc_core/fastq_reader.h
+	@perl -pi -e 's@#include \"\.\./3rd_party/cloudflare/zlib\.h\"@#include <zlib.h>@' $(KMC_SRC_DIR)/kmc_tools/fastq_reader.h
 	@mkdir -p $(KMC_SRC_DIR)/include
 	@mkdir -p $(KMC_SRC_DIR)/lib
 	@cp $(KMC_SRC_DIR)/kmc_api/*.h $(KMC_SRC_DIR)/include/ 2>/dev/null || true
-	@cd $(KMC_SRC_DIR) && $(MAKE)
+	@$(MAKE) -C "$(KMC_SRC_DIR)" -f "$(CURDIR)/$(KMC_MAKEFILE)" kmc kmc_tools
 	@echo "=> [KMC] Build complete."
 
 clean_kmc:
 	@if [ -d "$(KMC_SRC_DIR)" ]; then \
-	  $(MAKE) -C "$(KMC_SRC_DIR)" clean; \
+	  $(MAKE) -C "$(KMC_SRC_DIR)" -f "$(CURDIR)/$(KMC_MAKEFILE)" clean; \
 	  if git -C "$(KMC_SRC_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
 	    git -C "$(KMC_SRC_DIR)" checkout .; \
 	    git -C "$(KMC_SRC_DIR)" clean -fd; \
@@ -181,7 +195,7 @@ clean_kmc:
 	else \
 	  echo "=> [KMC] Source tree not found under $(KMC_SRC_DIR); skipping."; \
 	fi
-	-$(RM) -f $(OUT_BIN_DIR)/kmc $(OUT_BIN_DIR)/kmc_dump $(OUT_BIN_DIR)/kmc_tools
+	@$(RM) -f $(OUT_BIN_DIR)/kmc $(OUT_BIN_DIR)/kmc_dump $(OUT_BIN_DIR)/kmc_tools
 
 
 merge2stats:
