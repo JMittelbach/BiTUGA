@@ -86,7 +86,7 @@ def parse_args() -> argparse.Namespace:
         "--supplementary5-tsv",
         type=Path,
         default=paper_figshare_dir / "Supplementary_File_5.tsv",
-        help="Output path for compact TSV summary suitable as Supplementary File 5.",
+        help="Output path for the human-readable Supplementary File 5 report.",
     )
 
     ap.add_argument("--blastn-bin", default="blastn")
@@ -1012,64 +1012,19 @@ def write_summary_txt(path: Path, args: argparse.Namespace, rows: list[dict[str,
 def write_supplementary5_tsv(path: Path, args: argparse.Namespace, rows: list[dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    def relp(p: object) -> str:
-        pp = Path(str(p))
-        try:
-            return str(pp.resolve().relative_to(Path(args.repo_root).resolve()))
-        except Exception:
-            return str(pp)
+    def pct_fmt(n: int, d: int) -> str:
+        if d <= 0:
+            return "n/a"
+        return f"{(100.0 * n / d):.2f}%"
 
-    cols = [
-        "dataset",
-        "dataset_key",
-        "input_fasta",
-        "input_unmapped_ids",
-        "total_trait_associated_unitigs",
-        "mapped_in_reference_n",
-        "mapped_in_reference_pct",
-        "unmapped_in_reference_n",
-        "unmapped_in_reference_pct",
-        "queries_with_any_blast_row_n",
-        "queries_with_any_blast_row_pct",
-        "queries_with_significant_public_db_hit_n",
-        "queries_with_significant_public_db_hit_pct",
-        "queries_without_significant_hit_novel_n",
-        "queries_without_significant_hit_novel_pct",
-        "unmapped_with_significant_public_db_hit_n",
-        "unmapped_with_significant_public_db_hit_pct_of_unmapped",
-        "unmapped_without_significant_hit_novel_n",
-        "unmapped_without_significant_hit_novel_pct_of_unmapped",
-        "blast_rows_total",
-        "num_batches",
-        "batch_size",
-        "hit_evalue_max",
-        "hit_qcovs_min",
-        "hit_pident_min",
-        "hit_length_abs_min_bp",
-        "hit_min_aln_frac_min",
-        "db",
-        "task",
-        "blastn_bin",
-        "threads",
-        "delay_sec",
-        "max_retries",
-        "retry_wait_sec",
-        "max_target_seqs",
-        "max_hsps",
-        "remote",
-        "all_query_ids_file",
-        "hit_ids_file",
-        "novel_ids_file",
-        "unmapped_hit_ids_file",
-        "unmapped_novel_ids_file",
-        "combined_hits_all_tsv",
-        "combined_hits_significant_tsv",
-        "batch_progress_log",
-        "resume_checkpoint_json",
-    ]
     with path.open("w") as fh:
-        fh.write("\t".join(cols) + "\n")
+        fh.write("Supplementary File 5\n")
+        fh.write("Human-readable BLAST novelty classification summary\n\n")
+        fh.write("Counts and percentages are reported for reference mapping status and public DB BLAST support.\n")
+        fh.write("This report is dataset-centric and publication-ready (no run-path metadata).\n\n")
+
         for r in rows:
+            dataset = str(r["dataset"])
             total = int(r["total_unitigs"])
             mapped = int(r["mapped_unitigs_ref"])
             unmapped = int(r["unmapped_unitigs_ref"])
@@ -1079,55 +1034,71 @@ def write_supplementary5_tsv(path: Path, args: argparse.Namespace, rows: list[di
             unmapped_hit = int(r["unmapped_with_significant_hit"])
             unmapped_novel = int(r["unmapped_novel"])
 
-            row = {
-                "dataset": str(r["dataset"]),
-                "dataset_key": str(r["dataset_key"]),
-                "input_fasta": relp(r["input_fasta"]),
-                "input_unmapped_ids": relp(r["input_unmapped_ids"]),
-                "total_trait_associated_unitigs": str(total),
-                "mapped_in_reference_n": str(mapped),
-                "mapped_in_reference_pct": pct_num(mapped, total),
-                "unmapped_in_reference_n": str(unmapped),
-                "unmapped_in_reference_pct": pct_num(unmapped, total),
-                "queries_with_any_blast_row_n": str(any_hit),
-                "queries_with_any_blast_row_pct": pct_num(any_hit, total),
-                "queries_with_significant_public_db_hit_n": str(sig_hit),
-                "queries_with_significant_public_db_hit_pct": pct_num(sig_hit, total),
-                "queries_without_significant_hit_novel_n": str(novel),
-                "queries_without_significant_hit_novel_pct": pct_num(novel, total),
-                "unmapped_with_significant_public_db_hit_n": str(unmapped_hit),
-                "unmapped_with_significant_public_db_hit_pct_of_unmapped": pct_num(unmapped_hit, unmapped),
-                "unmapped_without_significant_hit_novel_n": str(unmapped_novel),
-                "unmapped_without_significant_hit_novel_pct_of_unmapped": pct_num(unmapped_novel, unmapped),
-                "blast_rows_total": str(r["blast_rows_total"]),
-                "num_batches": str(r["num_batches"]),
-                "batch_size": str(r["batch_size"]),
-                "hit_evalue_max": str(args.hit_evalue),
-                "hit_qcovs_min": str(args.hit_qcovs),
-                "hit_pident_min": str(args.hit_pident),
-                "hit_length_abs_min_bp": str(args.hit_length),
-                "hit_min_aln_frac_min": str(args.hit_min_aln_frac),
-                "db": str(args.db),
-                "task": str(args.task),
-                "blastn_bin": str(args.blastn_bin),
-                "threads": str(args.threads),
-                "delay_sec": str(args.delay_sec),
-                "max_retries": str(args.max_retries),
-                "retry_wait_sec": str(args.retry_wait_sec),
-                "max_target_seqs": str(args.max_target_seqs),
-                "max_hsps": str(args.max_hsps),
-                "remote": "no" if args.no_remote else "yes",
-                "all_query_ids_file": relp(r["all_query_ids_file"]),
-                "hit_ids_file": relp(r["hit_ids_file"]),
-                "novel_ids_file": relp(r["novel_ids_file"]),
-                "unmapped_hit_ids_file": relp(r["unmapped_hit_ids_file"]),
-                "unmapped_novel_ids_file": relp(r["unmapped_novel_ids_file"]),
-                "combined_hits_all_tsv": relp(r["combined_hits_all_tsv"]),
-                "combined_hits_significant_tsv": relp(r["combined_hits_significant_tsv"]),
-                "batch_progress_log": relp(r["batch_progress_log"]),
-                "resume_checkpoint_json": relp(r["resume_checkpoint_json"]),
-            }
-            fh.write("\t".join(row[c] for c in cols) + "\n")
+            mapped_hit = max(0, sig_hit - unmapped_hit)
+            mapped_novel = max(0, mapped - mapped_hit)
+
+            fh.write("==============================================================================\n")
+            fh.write(f"{dataset.upper()} -- BLAST NOVELTY SUMMARY\n")
+            fh.write("==============================================================================\n\n")
+
+            fh.write("Reference mapping\n\n")
+            fh.write(f"{'metric':<58} {'count':>10} {'% total':>12}\n")
+            fh.write(f"{'-' * 58} {'-' * 10:>10} {'-' * 12:>12}\n")
+            fh.write(f"{'Mapped to available reference':<58} {mapped:>10d} {pct_fmt(mapped, total):>12}\n")
+            fh.write(f"{'Not mapped to available reference':<58} {unmapped:>10d} {pct_fmt(unmapped, total):>12}\n\n")
+
+            fh.write("Public database BLAST support\n\n")
+            fh.write(f"{'metric':<58} {'count':>10} {'% total':>12}\n")
+            fh.write(f"{'-' * 58} {'-' * 10:>10} {'-' * 12:>12}\n")
+            fh.write(f"{'Significant public DB BLAST hit':<58} {sig_hit:>10d} {pct_fmt(sig_hit, total):>12}\n")
+            fh.write(f"{'No significant public DB BLAST hit':<58} {novel:>10d} {pct_fmt(novel, total):>12}\n\n")
+
+            fh.write("Combined reference and public DB classification\n\n")
+            fh.write(f"{'class':<58} {'count':>10} {'% total':>12}\n")
+            fh.write(f"{'-' * 58} {'-' * 10:>10} {'-' * 12:>12}\n")
+            fh.write(f"{'Mapped reference + significant BLAST hit':<58} {mapped_hit:>10d} {pct_fmt(mapped_hit, total):>12}\n")
+            fh.write(f"{'Mapped reference + no significant BLAST hit':<58} {mapped_novel:>10d} {pct_fmt(mapped_novel, total):>12}\n")
+            fh.write(f"{'Unmapped reference + significant BLAST hit':<58} {unmapped_hit:>10d} {pct_fmt(unmapped_hit, total):>12}\n")
+            fh.write(f"{'Unmapped reference + no significant BLAST hit':<58} {unmapped_novel:>10d} {pct_fmt(unmapped_novel, total):>12}\n\n")
+
+            fh.write("Reference-unmapped subset\n\n")
+            fh.write(f"{'class':<58} {'count':>10} {'% unmapped':>14} {'% total':>12}\n")
+            fh.write(f"{'-' * 58} {'-' * 10:>10} {'-' * 14:>14} {'-' * 12:>12}\n")
+            fh.write(
+                f"{'Unmapped reference + significant BLAST hit':<58} "
+                f"{unmapped_hit:>10d} {pct_fmt(unmapped_hit, unmapped):>14} {pct_fmt(unmapped_hit, total):>12}\n"
+            )
+            fh.write(
+                f"{'Unmapped reference + no significant BLAST hit':<58} "
+                f"{unmapped_novel:>10d} {pct_fmt(unmapped_novel, unmapped):>14} {pct_fmt(unmapped_novel, total):>12}\n"
+            )
+            fh.write(
+                f"{'Total reference-unmapped unitigs':<58} "
+                f"{unmapped:>10d} {pct_fmt(unmapped, unmapped):>14} {pct_fmt(unmapped, total):>12}\n\n"
+            )
+
+            fh.write("Context across all trait-associated unitigs\n\n")
+            fh.write(f"{'metric':<58} {'count':>10} {'% total':>12}\n")
+            fh.write(f"{'-' * 58} {'-' * 10:>10} {'-' * 12:>12}\n")
+            fh.write(f"{'Total trait-associated unitigs':<58} {total:>10d} {pct_fmt(total, total):>12}\n")
+            fh.write(f"{'Mapped to available reference':<58} {mapped:>10d} {pct_fmt(mapped, total):>12}\n")
+            fh.write(f"{'Reference-unmapped unitigs':<58} {unmapped:>10d} {pct_fmt(unmapped, total):>12}\n")
+            fh.write(f"{'Queries with any BLAST row':<58} {any_hit:>10d} {pct_fmt(any_hit, total):>12}\n")
+            fh.write(f"{'Queries with significant BLAST hit (all unitigs)':<58} {sig_hit:>10d} {pct_fmt(sig_hit, total):>12}\n")
+            fh.write(f"{'Queries without significant BLAST hit (all unitigs)':<58} {novel:>10d} {pct_fmt(novel, total):>12}\n")
+            fh.write(f"{'Total BLAST rows retained':<58} {int(r['blast_rows_total']):>10d} {'n/a':>12}\n\n")
+
+        fh.write("BLAST significance criteria used for all datasets\n\n")
+        fh.write(f"{'criterion':<36} {'value':<20}\n")
+        fh.write(f"{'-' * 36} {'-' * 20}\n")
+        fh.write(f"{'evalue <=':<36} {args.hit_evalue:<20}\n")
+        fh.write(f"{'qcovs >=':<36} {args.hit_qcovs:<20}\n")
+        fh.write(f"{'pident >=':<36} {args.hit_pident:<20}\n")
+        fh.write(f"{'alignment length absolute min (bp)':<36} {args.hit_length:<20}\n")
+        fh.write(f"{'alignment length min fraction':<36} {args.hit_min_aln_frac:<20}\n")
+        fh.write(f"{'db / task':<36} {args.db} / {args.task}\n")
+        fh.write(f"{'max_target_seqs / max_hsps':<36} {args.max_target_seqs} / {args.max_hsps}\n")
+        fh.write(f"{'remote mode':<36} {'no' if args.no_remote else 'yes'}\n")
 
 
 def main() -> int:
