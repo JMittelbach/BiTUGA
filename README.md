@@ -28,7 +28,7 @@ BibTeX:
 git clone https://github.com/JMittelbach/BiTUGA.git
 cd BiTUGA
 
-# 2) Build + smoke tests (runs deps automatically)
+# 2) Build + smoke tests
 make all
 
 # Optional: run steps manually
@@ -36,10 +36,10 @@ make all
 # make build
 # make test
 
-# 3) Install plotting dep (required for plots)
+# 3) Install plotting dep
 pip install matplotlib
 
-# 4) Inspect options
+# 4) Command-line options
 ./BiTUGA.sh --help
 
 # Minimal execution example
