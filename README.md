@@ -1,4 +1,4 @@
-# BiTUGA: Scalable Prevalence-Based Unitig Association Testing for binary traits
+# BiTUGA: scalable prevalence-based unitig association testing for binary traits
 
 **BiTUGA** is a scalable workflow designed for **prevalence-based unitig association testing**, specifically optimized for **binary traits** in large and highly repetitive genomes.
 
