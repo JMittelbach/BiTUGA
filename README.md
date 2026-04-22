@@ -52,9 +52,8 @@ pip install matplotlib
 ```
 
 ### What `make deps` does
-- Initializes only required submodules (non-recursive): `src/external/bcalm` and `src/external/kmc`.
-- Initializes only required nested BCALM dependency: `src/external/bcalm/gatb-core`.
-- Explicitly deinitializes/removes KMC's optional `3rd_party/cloudflare` submodule.
+- Initializes submodules: `src/external/bcalm` and `src/external/kmc`.
+- Explicitly deinitializes/removes KMC's `3rd_party/cloudflare` submodule.
 - Keeps external versions pinned to the commits tracked by this repository.
 
 ## Compiler (Quick)
