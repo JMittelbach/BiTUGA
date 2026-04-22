@@ -74,7 +74,7 @@ make clean && make test
 ```
 
 ## Conceptual Overview
-- Steps: count k-mers → filter by prevalence → assemble unitigs → map to a input reads → Fisher tests + multiple testing correction → FASTA with significant unitigs. Supports raw (untrimmed) FASTQs; single-end and paired-end reads are accepted.
+- Steps: count k-mers → filter by prevalence → assemble unitigs → map to a input reads → Fisher tests + multiple testing correction → FASTA with significant unitigs. Supports raw (untrimmed) FASTQs; single-end and paired-end short reads are accepted.
 
 ## Repository Structure
 ```
