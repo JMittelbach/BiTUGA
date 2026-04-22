@@ -126,7 +126,7 @@ Trait table: two columns (sample ID, trait/binary label); see `trait_info/` exam
   - Scales with: retained k-mers.
 
 - **Pass IV — unitig presence verification**  
-  - Does: map unitigs (MiniMatcher) and compute coverage tables.  
+  - Does: map unitigs and compute coverage tables.  
   - Takes: unitigs FASTA, reference FASTA; `--nt-threads`, `--query-split-size` (reads/batch).  
   - Knobs: `--query-split-size` (powers of two), seed/rev-comp options, `--min-mem-length` (default k+1), replicate caps.  
   - Writes: PAF, coverage TSVs, top-window summaries, plots.  
