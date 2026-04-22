@@ -34,16 +34,20 @@ M2S_DIR      := src/merge2stats
 MM_DIR       := src/MiniMatcher
 POST_MM_DIR  := src/postprocess_MiniMatcher
 
-.PHONY: all clean distclean help test deps
+.PHONY: all build clean distclean help test deps
 .PHONY: bcalm clean_bcalm kmc clean_kmc
 .PHONY: merge2stats minimatcher postprocess_mm
 
-all: bcalm kmc merge2stats minimatcher postprocess_mm
+all: deps build test
+	@echo "=> [BiTUGA] Full workflow finished (deps + build + test)."
+
+build: bcalm kmc merge2stats minimatcher postprocess_mm
 	@echo "=> [BiTUGA] All components built successfully."
 
 help:
 	@echo "Available commands:"
-	@echo "  make             - Builds everything (externals & own tools)"
+	@echo "  make / make all  - Run deps + build + smoke tests"
+	@echo "  make build       - Builds everything (externals & own tools)"
 	@echo "  make deps        - Initializes only required submodules"
 	@echo "  make test        - Builds everything and runs smoke checks"
 	@echo "  make clean       - Cleans all build files"
@@ -53,7 +57,7 @@ help:
 	@echo "  make minimatcher - Builds MiniMatcher"
 	@echo "  make postprocess_mm - Builds postprocess_MiniMatcher"
 
-test: all
+test: build
 	@echo "=> [BiTUGA] Running smoke tests..."
 	@set -e; \
 	for exe in \
@@ -91,7 +95,7 @@ deps:
 	fi
 
 
-bcalm: $(OUT_BIN_DIR)/bcalm
+bcalm: deps $(OUT_BIN_DIR)/bcalm
 
 $(OUT_BIN_DIR)/bcalm: $(BCALM_BUILD_DIR)/stamp-build
 	@mkdir -p $(OUT_BIN_DIR)
@@ -105,7 +109,6 @@ $(BCALM_BUILD_DIR)/stamp-build: $(BCALM_BUILD_DIR)/stamp-config
 
 $(BCALM_BUILD_DIR)/stamp-config:
 	@mkdir -p $(BCALM_BUILD_DIR)
-	@$(MAKE) deps
 	@cp -f $(BCALM_PATCH_FILE) $(BCALM_SRC_DIR)/gatb-core/gatb-core/CMakeLists.txt
 	@cd $(BCALM_BUILD_DIR) && \
 	  bcalm_cc="$(CC)"; \
@@ -156,9 +159,8 @@ clean_bcalm:
 	  git -C "$(BCALM_SRC_DIR)/gatb-core" checkout -- gatb-core/CMakeLists.txt >/dev/null 2>&1 || true; \
 	fi
 
-kmc:
+kmc: deps
 	@echo "=> [KMC] Building KMC..."
-	@$(MAKE) deps
 	@if [ -d "$(KMC_SRC_DIR)" ] && git -C "$(KMC_SRC_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
 	  git -C "$(KMC_SRC_DIR)" checkout . > /dev/null 2>&1 || true; \
 	  git -C "$(KMC_SRC_DIR)" submodule deinit -f -- 3rd_party/cloudflare > /dev/null 2>&1 || true; \

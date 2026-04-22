@@ -28,19 +28,18 @@ BibTeX:
 git clone https://github.com/JMittelbach/BiTUGA.git
 cd BiTUGA
 
-# 2) Initialize required submodules only
-make deps
+# 2) Build + smoke tests (runs deps automatically)
+make all
 
-# 3) Build native components
-make
+# Optional: run steps manually
+# make deps
+# make build
+# make test
 
-# 4) Run smoke tests (optional but recommended)
-make test
-
-# 5) Install plotting dep (required for plots)
+# 3) Install plotting dep (required for plots)
 pip install matplotlib
 
-# 6) Inspect options
+# 4) Inspect options
 ./BiTUGA.sh --help
 
 # Minimal execution example
@@ -58,12 +57,20 @@ pip install matplotlib
 - Explicitly deinitializes/removes KMC's optional `3rd_party/cloudflare` submodule.
 - Keeps external versions pinned to the commits tracked by this repository.
 
-## Compiler Definitions (optional)
-By default, BiTUGA uses your system default toolchain (`cc`/`c++`).
-To force a specific compiler, set `CC` and `CXX` before `make`:
+## Compiler (Quick)
+- Requirement: C++20 compiler with `std::format` support.
+- Recommended:
+  - macOS (Apple Silicon): Apple clang 17 or Homebrew `g++-15`
+  - Linux: `g++` 13+ or recent `clang++`
+- Check your compiler:
 ```bash
-export CC=/opt/homebrew/bin/gcc-15
-export CXX=/opt/homebrew/bin/g++-15
+c++ --version
+```
+- If needed, set compiler and rebuild:
+```bash
+export CC=$(command -v gcc-15)
+export CXX=$(command -v g++-15)
+make clean && make test
 ```
 
 ## Conceptual Overview
