@@ -46,6 +46,17 @@ case "${OUTDIR_BASE}" in /*) : ;; *) OUTDIR_BASE="${ROOT_DIR}/${OUTDIR_BASE}";; 
 case "${METADATA}"   in /*) : ;; *) METADATA="${ROOT_DIR}/${METADATA}";; esac
 case "${KMC_BIN}"    in /*) : ;; *) KMC_BIN="${ROOT_DIR}/${KMC_BIN}";; esac
 
+if ! [[ "${MEM_GB}" =~ ^[0-9]+$ ]]; then
+  echo "[ERR] --mem-gb must be an integer, got: ${MEM_GB}" >&2
+  exit 1
+fi
+if (( MEM_GB < 1 || MEM_GB > 1024 )); then
+  echo "[ERR] --mem-gb must be in [1,1024] GB because KMC -m supports 1..1024." >&2
+  echo "[ERR] Given: ${MEM_GB}" >&2
+  echo "[ERR] If this came from SLURM_MEM_PER_NODE, convert MB to GB first." >&2
+  exit 1
+fi
+
 KMC="${KMC_BIN%/}/kmc"
 KMCT="${KMC_BIN%/}/kmc_tools"
 

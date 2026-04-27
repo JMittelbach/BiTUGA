@@ -92,7 +92,7 @@ BiTUGA/
 - `--k`                k-mer length (default 31)  
 - `--ci` / `--cx`      KMC min/max counter (defaults 2 / 4,294,967,295); higher `ci` reduces noise, `cx` caps abundance  
 - `--threads`          CPU threads (default 12)  
-- `--mem-gb`           RAM limit (default 16 GB)  
+- `--mem-gb`           RAM limit for KMC (default 16 GB; valid range 1-1024)  
 - `--group-contrast`   presence in ≥50% of one group AND ≤30% in the other  
 - Prevalence defaults   auto-adaptive: `--prev-min/--prev-max`=0.25/0.75; `--group-min/--group-max`=0.0/1.0 unless group-contrast is set  
 - `--fdr` / `--fdr-alpha`   default `--fdr auto` (BH, alpha 0.05); `--raw-p-threshold` default 0.01 when FDR is off  
@@ -100,6 +100,7 @@ BiTUGA/
 - `--max-replicate-ref` / `--max-replicate-qry` cap replicated seeds (Pass IV)  
 - `--start-pass` / `--end-pass` rerun subsets; restart from earliest affected pass after param changes  
 Trait table: two columns (sample ID, trait/binary label); see `trait_info/` examples.
+If using SLURM, note that `SLURM_MEM_PER_NODE` is typically in MB; convert before passing to `--mem-gb` (e.g. `--mem-gb $((SLURM_MEM_PER_NODE/1024))`).
 
 ## Pipeline passes
 

@@ -34,6 +34,16 @@ done
 [[ -n "$LOGFILE" ]] || LOGFILE="${ROOT_DIR}/logging/build_pooled_kmc_files.log"
 mkdir -p "$(dirname "${LOGFILE}")"
 
+if ! [[ "${MEM_GB}" =~ ^[0-9]+$ ]]; then
+  echo "[create_kmc3_sample] ERR: --mem-gb must be an integer, got: ${MEM_GB}" >> "${LOGFILE}"
+  exit 1
+fi
+if (( MEM_GB < 1 || MEM_GB > 1024 )); then
+  echo "[create_kmc3_sample] ERR: --mem-gb must be in [1,1024] GB because KMC -m supports 1..1024." >> "${LOGFILE}"
+  echo "[create_kmc3_sample] ERR: Given: ${MEM_GB}" >> "${LOGFILE}"
+  exit 1
+fi
+
 [[ -n "$KMC_BIN" ]] || KMC_BIN="${BIN_DIR}"
 case "${KMC_BIN}" in /*) : ;; *) KMC_BIN="${ROOT_DIR}/${KMC_BIN}";; esac
 

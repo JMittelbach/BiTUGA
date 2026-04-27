@@ -22,7 +22,7 @@ Key options:
   --trait-info <file>    trait_info.tsv  Trait info table (tsv/csv/txt; header with ID and trait column; delim: tab/comma/space)
   --out-dir <dir>        current dir     Output and working directory
   --threads <int>        12              Max CPU threads to use
-  --mem-gb <int>         16              Max RAM (GB) to use
+  --mem-gb <int>         16              Max RAM (GB) to use for KMC (1-1024)
   --k <int>              31              k-mer length
   --prev-min <float>     0.25            Keep k-mers present in at least this fraction of samples
   --prev-max <float>     0.75            Drop k-mers present in more than this fraction of samples
@@ -74,7 +74,7 @@ Argument groups:
   Shared resources:
     Option                Default           Description
     --threads <int>       12                Max CPU threads
-    --mem-gb <int>        16                Max RAM in GB
+    --mem-gb <int>        16                Max RAM in GB for KMC (1-1024)
 
   Pipeline control:
     --start-pass <0-5>    0                 First pass to run
@@ -356,7 +356,15 @@ fi
 # Argument validation
 [[ -n "${THREADS}"    ]] && validate_int_min "threads" "${THREADS}" 1
 [[ -n "${NT_THREADS}" ]] && validate_int_min "nt-threads" "${NT_THREADS}" 1
-[[ -n "${MEM_GB}"     ]] && validate_int_min "mem-gb" "${MEM_GB}" 1
+if [[ -n "${MEM_GB}" ]]; then
+  validate_int_min "mem-gb" "${MEM_GB}" 1
+  if (( MEM_GB > 1024 )); then
+    echo "[ERR] --mem-gb must be <= 1024 (KMC -m supports 1..1024 GB)." >&2
+    echo "[ERR] Given: ${MEM_GB}" >&2
+    echo "[ERR] If you pass SLURM_MEM_PER_NODE, convert MB to GB first (e.g. --mem-gb \$((SLURM_MEM_PER_NODE/1024)))." >&2
+    exit 1
+  fi
+fi
 [[ -n "${P4_QSPLIT}"  ]] && validate_int_min "query-split-size" "${P4_QSPLIT}" 1
 [[ -n "${K}"          ]] && validate_int_min "k" "${K}" 1
 [[ -n "${CI}"         ]] && validate_int_min "ci" "${CI}" 1
