@@ -406,8 +406,8 @@ if [[ -n "${PREV_MIN}" && -n "${PREV_MAX}" ]]; then
   fi
 fi
 if [[ -n "${GROUP_MIN}" && -n "${GROUP_MAX}" ]]; then
-  if awk -v a="${GROUP_MIN}" -v b="${GROUP_MAX}" 'BEGIN{exit (a<=b)?0:1}'; then :; else
-    echo "[ERR] --group-min must be <= --group-max" >&2
+  if awk -v a="${GROUP_MIN}" -v b="${GROUP_MAX}" 'BEGIN{exit (a>=b)?0:1}'; then :; else
+    echo "[ERR] --group-min must be >= --group-max" >&2
     exit 1
   fi
 fi
