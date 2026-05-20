@@ -60,7 +60,7 @@ pip install matplotlib
 - Requirement: C++20 compiler with `std::format` support.
 - Recommended:
   - macOS (Apple Silicon): Apple clang 17 or Homebrew `g++-15`
-  - Linux: `g++` 13+ or recent `clang++`
+  - Linux: `g++` 13 or higher, or recent `clang++`
 - Check your compiler:
 ```bash
 c++ --version
@@ -165,6 +165,10 @@ If using SLURM, note that `SLURM_MEM_PER_NODE` is typically in MB; convert befor
 - A `metadata.tsv` is written to `--out-dir` if not provided; trait-info can be tsv/csv/txt with sample ID and trait columns.
 
 ## Dependencies
+- Build system: `make`, `cmake` (>= 3.10).
+- C/C++ compilers (required for native components, including BCALM):
+  - Linux: `g++` 13 or higher, or recent `clang++`
+  - macOS: recent Apple `clang`/`clang++` or Homebrew `g++`
 - Core pipeline: bash + compiled tools (KMC, BCALM, MiniMatcher, merge2stats). 
 - Plots: `matplotlib`.  
 
