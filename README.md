@@ -8,17 +8,18 @@ Unlike traditional reference-free methods that rely on computationally expensive
 
 If you use BiTUGA in your research, please cite:
 
-> **Mittelbach, J., Kersten, B., & Kurtz, S. (2025).** *BiTUGA: scalable prevalence-based unitig association testing for binary traits in large genomes.* Manuscript submitted to **G3: Genes|Genomes|Genetics**.
+> **Mittelbach, J., Kersten, B., & Kurtz, S. (2026).** *BiTUGA: scalable prevalence-based unitig association testing for binary traits.* **G3 Genes|Genomes|Genetics**, jkag149. https://doi.org/10.1093/g3journal/jkag149
 
 BibTeX:
 ```bibtex
-@unpublished{BiTUGA2025,
-  author = {Mittelbach, Jannes and Kersten, Birgit and Kurtz, Stefan},
-  title  = {BiTUGA: scalable prevalence-based unitig association testing for binary traits in large genomes},
-  year   = {2025},
-  note   = {Manuscript submitted to G3: Genes|Genomes|Genetics},
-  url    = {https://github.com/JMittelbach/BiTUGA},
-  version = {v1.0.0}
+@article{Mittelbach2026BiTUGA,
+  author  = {Mittelbach, Jannes and Kersten, Birgit and Kurtz, Stefan},
+  title   = {BiTUGA: scalable prevalence-based unitig association testing for binary traits},
+  journal = {G3 Genes|Genomes|Genetics},
+  year    = {2026},
+  pages   = {jkag149},
+  doi     = {10.1093/g3journal/jkag149},
+  url     = {https://doi.org/10.1093/g3journal/jkag149}
 }
 ```
 

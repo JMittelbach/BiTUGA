@@ -7,7 +7,7 @@ authors:
   given-names: "Birgit"
 - family-names: "Kurtz"
   given-names: "Stefan"
-title: "BiTUGA: scalable prevalence-based unitig association testing for binary traits in large genomes"
+title: "BiTUGA: scalable prevalence-based unitig association testing for binary traits"
 version: 1.0.0
 date-released: 2025-12-23
 url: "https://github.com/JMittelbach/BiTUGA"
@@ -20,7 +20,8 @@ preferred-citation:
     given-names: "Birgit"
   - family-names: "Kurtz"
     given-names: "Stefan"
-  title: "BiTUGA: scalable prevalence-based unitig association testing for binary traits in large genomes"
-  year: 2025
-  journal: "Manuscript submitted to G3: Genes|Genomes|Genetics"
-  status: submitted
+  title: "BiTUGA: scalable prevalence-based unitig association testing for binary traits"
+  year: 2026
+  journal: "G3 Genes|Genomes|Genetics"
+  doi: "10.1093/g3journal/jkag149"
+  url: "https://doi.org/10.1093/g3journal/jkag149"
