@@ -53,7 +53,8 @@ def storey_qvalues(p_values: List[float], lambda_grid=None) -> Tuple[List[float]
         pi0_hat = cnt / ((1.0 - lam) * m)
         pi0_estimates.append(pi0_hat)
     pi0 = _median(pi0_estimates)
-    if math.isnan(pi0):
+    # Fall back to BH when estimation fails or collapses to zero.
+    if math.isnan(pi0) or pi0 <= 0.0:
         pi0 = 1.0
     pi0 = max(0.0, min(1.0, pi0))
 

@@ -34,7 +34,7 @@ M2S_DIR      := src/merge2stats
 MM_DIR       := src/MiniMatcher
 POST_MM_DIR  := src/postprocess_MiniMatcher
 
-.PHONY: all build clean distclean help test deps
+.PHONY: all build clean distclean help test test-stats deps
 .PHONY: bcalm clean_bcalm kmc clean_kmc
 .PHONY: merge2stats minimatcher postprocess_mm
 
@@ -50,6 +50,7 @@ help:
 	@echo "  make build       - Builds everything (externals & own tools)"
 	@echo "  make deps        - Initializes only required submodules"
 	@echo "  make test        - Builds everything and runs smoke checks"
+	@echo "  make test-stats  - Runs synthetic statistics tests (Python standard library only)"
 	@echo "  make clean       - Cleans all build files"
 	@echo "  make bcalm       - Builds only BCALM"
 	@echo "  make kmc         - Builds only KMC"
@@ -57,7 +58,10 @@ help:
 	@echo "  make minimatcher - Builds MiniMatcher"
 	@echo "  make postprocess_mm - Builds postprocess_MiniMatcher"
 
-test: build
+test-stats:
+	python3 -B -m unittest discover -s tests -v
+
+test: build test-stats
 	@echo "=> [BiTUGA] Running smoke tests..."
 	@set -e; \
 	for exe in \

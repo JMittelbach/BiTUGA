@@ -38,19 +38,15 @@ def fisher_two_sided(a: int, b: int, c: int, d: int) -> float:
     x_max = min(col1, r1)
     denom = comb(N, col1)
 
-    def prob(x: int) -> float:
-        return comb(r1, x) * comb(r2, col1 - x) / denom
-
-    p_obs = prob(a)
-    p_sum = 0.0
-    eps = 1e-12
+    # Every table has the same denominator. Compare integer numerators
+    # exactly so an absolute float tolerance cannot inflate tiny p-values.
+    observed_weight = comb(r1, a) * comb(r2, col1 - a)
+    tail_weight = 0
     for x in range(x_min, x_max + 1):
-        p = prob(x)
-        if p <= p_obs + eps:
-            p_sum += p
-    if p_sum > 1.0:
-        p_sum = 1.0
-    return p_sum
+        weight = comb(r1, x) * comb(r2, col1 - x)
+        if weight <= observed_weight:
+            tail_weight += weight
+    return tail_weight / denom
 
 
 def build_fisher_lookup(n1: int, n2: int) -> Dict[Tuple[int, int], float]:

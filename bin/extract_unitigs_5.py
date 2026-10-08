@@ -277,11 +277,11 @@ def main():
         written_global += 1
 
         if args.split_by_bias:
-            if bias == "trait1" and f_t1 is not None:
+            if uid in by_bias_t1 and f_t1 is not None:
                 f_t1.write(new_header + "\n")
                 f_t1.write(seq + "\n")
                 written_t1 += 1
-            elif bias == "trait2" and f_t2 is not None:
+            elif uid in by_bias_t2 and f_t2 is not None:
                 f_t2.write(new_header + "\n")
                 f_t2.write(seq + "\n")
                 written_t2 += 1
