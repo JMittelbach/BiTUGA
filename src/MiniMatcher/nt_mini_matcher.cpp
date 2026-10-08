@@ -857,57 +857,55 @@ static void threaded_match_query_against_reference(
                                       padding_char,
                                       grant_owner_ship);
   const size_t num_threads = guide_params.number_of_threads_get();
-  ThreadPoolUnknownTasks thread_pool(num_threads);
   ThreadSpecificIndex thread_specific_index(num_threads);
   const std::vector<FILE *> output_filepointers
     = threads_output_files->filepointers_vector_get();
   std::vector<size_t> solved_tasks(num_threads,0);
-  for (GttlMultiseq *query_multiseq : ms_gen)
   {
-    while (thread_pool.size_of_queue() > max_size_of_queue - 1)
+    ThreadPoolUnknownTasks thread_pool(num_threads);
+    for (GttlMultiseq *query_multiseq : ms_gen)
     {
-      using namespace std::chrono_literals;
-      std::this_thread::sleep_for(40ms); // NOLINT(misc-include-cleaner)
+      while (thread_pool.size_of_queue() > max_size_of_queue - 1)
+      {
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(40ms); // NOLINT(misc-include-cleaner)
+      }
+      thread_pool.enqueue([&thread_specific_index,
+                           &output_filepointers,
+                           query_multiseq,
+                           var_ref_idx,
+                           rhqg,
+                           guide_params,
+                           &solved_tasks] {
+        const size_t thread_idx = thread_specific_index.get();
+        assert(thread_idx < output_filepointers.size());
+        solved_tasks[thread_idx] += query_multiseq->sequences_total_length_get();
+        FILE *out_fp = output_filepointers[thread_idx];
+        if (guide_params.verbose_option_get())
+        {
+          fprintf(out_fp, "# start processing query_multiseq with seqnum offset "
+                          "%zu of size %.0f (MB)\n",
+                          query_multiseq->sequence_number_offset_get(),
+                          mega_bytes(query_multiseq->size_in_bytes()));
+        }
+        process_single_query_multiseq<RefHashedQgramsClass,
+                                      store_seeds,
+                                      use_diagonal_encoder>
+                                     (out_fp,
+                                      var_ref_idx,
+                                      rhqg,
+                                      query_multiseq,
+                                      guide_params);
+        if (guide_params.verbose_option_get())
+        {
+          fprintf(out_fp, "# process query_multiseq with seqnum offset %zu "
+                          "finished\n",
+                          query_multiseq->sequence_number_offset_get());
+        }
+        delete query_multiseq;
+      });
     }
-    thread_pool.enqueue([&thread_specific_index,
-                         &output_filepointers,
-                         query_multiseq,
-                         var_ref_idx,
-                         rhqg,
-                         guide_params,
-                         &solved_tasks] {
-      const size_t thread_idx = thread_specific_index.get();
-      assert(thread_idx < output_filepointers.size());
-      solved_tasks[thread_idx] += query_multiseq->sequences_total_length_get();
-      FILE *out_fp = output_filepointers[thread_idx];
-      if (guide_params.verbose_option_get())
-      {
-        fprintf(out_fp, "# start processing query_multiseq with seqnum offset "
-                        "%zu of size %.0f (MB)\n",
-                        query_multiseq->sequence_number_offset_get(),
-                        mega_bytes(query_multiseq->size_in_bytes()));
-      }
-      process_single_query_multiseq<RefHashedQgramsClass,
-                                    store_seeds,
-                                    use_diagonal_encoder>
-                                   (out_fp,
-                                    var_ref_idx,
-                                    rhqg,
-                                    query_multiseq,
-                                    guide_params);
-      if (guide_params.verbose_option_get())
-      {
-        fprintf(out_fp, "# process query_multiseq with seqnum offset %zu "
-                        "finished\n",
-                        query_multiseq->sequence_number_offset_get());
-      }
-      delete query_multiseq;
-    });
-  }
-  while (thread_pool.size_of_queue() > 0)
-  {
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(40ms); // NOLINT(misc-include-cleaner)
+    // Join all workers before reading statistics or destroying captured locals.
   }
   if (guide_params.verbose_option_get())
   {

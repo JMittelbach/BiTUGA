@@ -50,7 +50,10 @@ class ThreadPoolUnknownTasks
 
   ~ThreadPoolUnknownTasks(void)
   {
-    stop.store(true, std::memory_order_relaxed);
+    {
+      const std::scoped_lock<std::mutex> lock(queue_lock);
+      stop.store(true, std::memory_order_relaxed);
+    }
     tasks_changed.notify_all();
     for (auto& t : threads)
     {
@@ -60,7 +63,10 @@ class ThreadPoolUnknownTasks
 
   void enqueue(const FunctionType &task)
   {
-    tsq.enqueue(task);
+    {
+      const std::scoped_lock<std::mutex> lock(queue_lock);
+      tsq.enqueue(task);
+    }
     tasks_changed.notify_one();
   }
 
