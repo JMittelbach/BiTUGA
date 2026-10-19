@@ -175,7 +175,8 @@ def build_trait_mapping(pairs):
             if sex_base is not None and sex_rep is not None and sex_base != sex_rep:
                 continue
 
-            if base == rep or levenshtein(base, rep) <= 2 or sorted(base) == sorted(rep):
+            # Distinct categorical values (e.g. 0/1 or A/B) are not typos.
+            if base == rep or (sex_base is not None and sex_base == sex_rep):
                 cluster.append(base)
                 placed = True
                 break

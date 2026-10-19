@@ -187,6 +187,14 @@ class GttlMultiseqGenerator
         ++gen1;
       }
     }
+    // Exact multiples of the batch size discover EOF on the next advance.
+    // Never yield an empty multiseq to the hashing code.
+    if (seqnum == 0)
+    {
+      delete multiseq;
+      multiseq = nullptr;
+      return false;
+    }
     if constexpr (fastq_paired_input)
     {
       sequence_number_offset += (2 * seqnum);

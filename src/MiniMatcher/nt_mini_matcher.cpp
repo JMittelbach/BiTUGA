@@ -246,7 +246,9 @@ static bool check_false_sequence_type(const char *progname,
   bool has_err = false, is_protein = false;
   try
   {
-    is_protein = guess_if_protein_file(filename);
+    is_protein = gttl_likely_fasta_format(filename)
+      ? guess_if_protein_file(filename)
+      : guess_if_protein_file_generic<GttlFastQGenerator<(1 << 14)>>(filename);
   }
   catch (const std::exception &err) /* check_err.py */
   {
@@ -1219,12 +1221,19 @@ static void iterate_over_queryfiles_generic(
                  RefHashedQgrams,
                  store_seeds,
                  use_diagonal_encoder>
-            : threaded_match_query_against_reference
+            : (gttl_likely_fasta_format(query_files[0])
+              ? threaded_match_query_against_reference
                 <GttlFastAGenerator<buf_size>,
                  false,
                  RefHashedQgrams,
                  store_seeds,
-                 use_diagonal_encoder>)
+                 use_diagonal_encoder>
+              : threaded_match_query_against_reference
+                <GttlFastQGenerator<buf_size>,
+                 false,
+                 RefHashedQgrams,
+                 store_seeds,
+                 use_diagonal_encoder>))
                 (&threads_output_files,
                  max_size_of_queue,
                  query_files,

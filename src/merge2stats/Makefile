@@ -33,7 +33,7 @@ OBJ       := $(SRC:.cpp=.o)
 
 all: $(BIN)
 
-$(BIN): $(OBJ)
+$(BIN): $(OBJ) $(KMC_DIR)/lib/libkmc_core.a
 	@mkdir -p $(OUTDIR)
 	$(LD) $(LDFLAGS) $(OBJ) -o $@ $(LDLIBS)
 

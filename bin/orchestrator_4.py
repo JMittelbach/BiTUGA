@@ -240,9 +240,12 @@ def compute_length_params_heuristic(hist: dict, k_len: int, fallback_median: flo
     med_min_bp = max(short_min_bp + 1, math.ceil(0.8 * L_med_med))
     long_min_bp = max(med_min_bp + 1, math.ceil(0.8 * L_long_med))
 
-    short_min_seg = short_min_bp
-    med_min_seg = max(short_min_bp, min(med_min_bp, L_med_med))
-    long_min_seg = max(med_min_bp, min(long_min_bp, L_long_med))
+    # Per-read matches must not scale to total unitig length: e.g. 150-bp
+    # reads cannot meet an 810-bp segment threshold for a 900-bp unitig.
+    # Retain the existing per-segment baselines and total coverage checks.
+    short_min_seg = max(k_len, min(short_min_bp, legacy_short_min_seg))
+    med_min_seg = max(k_len, min(med_min_bp, legacy_med_min_seg))
+    long_min_seg = max(k_len, min(long_min_bp, legacy_long_min_seg))
 
     return (
         short_max,

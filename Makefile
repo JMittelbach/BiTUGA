@@ -61,7 +61,8 @@ help:
 test-stats:
 	python3 -B -m unittest discover -s tests -v
 
-test: build test-stats
+test: build
+	@$(MAKE) test-stats
 	@echo "=> [BiTUGA] Running smoke tests..."
 	@set -e; \
 	for exe in \
@@ -111,7 +112,7 @@ $(BCALM_BUILD_DIR)/stamp-build: $(BCALM_BUILD_DIR)/stamp-config
 	$$(command -v nproc >/dev/null 2>&1 && echo "make -j$$(nproc)" || echo "make -j4") -C $(BCALM_BUILD_DIR)
 	@touch $@
 
-$(BCALM_BUILD_DIR)/stamp-config:
+$(BCALM_BUILD_DIR)/stamp-config: | deps
 	@mkdir -p $(BCALM_BUILD_DIR)
 	@cp -f $(BCALM_PATCH_FILE) $(BCALM_SRC_DIR)/gatb-core/gatb-core/CMakeLists.txt
 	@cd $(BCALM_BUILD_DIR) && \
@@ -204,7 +205,7 @@ clean_kmc:
 	@$(RM) -f $(OUT_BIN_DIR)/kmc $(OUT_BIN_DIR)/kmc_dump $(OUT_BIN_DIR)/kmc_tools
 
 
-merge2stats:
+merge2stats: kmc
 	@echo "=> [BiTUGA] Building merge2stats..."
 	$(MAKE) -C $(M2S_DIR)
 
