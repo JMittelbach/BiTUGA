@@ -1,6 +1,7 @@
 import contextlib
 import gzip
 import io
+import os
 from pathlib import Path
 import random
 import struct
@@ -32,6 +33,42 @@ class TraitTests(unittest.TestCase):
     def test_sex_aliases_still_normalize(self):
         self.assertEqual(self.mapping(["M", "male", "F", "female"]),
                          {"M": "male", "male": "male", "F": "female", "female": "female"})
+
+
+class PoolThreadTests(unittest.TestCase):
+    def test_kmc_tools_union_receives_requested_threads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            bindir = work / "bin"
+            bindir.mkdir()
+            args_log = work / "kmc_tools.args"
+            fake_kmc_tools = bindir / "kmc_tools"
+            fake_kmc_tools.write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s\\n' \"$@\" > \"$KMC_TOOLS_ARGS_LOG\"\n"
+                "for output in \"$@\"; do :; done\n"
+                ": > \"${output}.kmc_pre\"\n"
+                ": > \"${output}.kmc_suf\"\n"
+            )
+            fake_kmc_tools.chmod(0o755)
+            sample = work / "sample"
+            results = work / "results"
+            pool = results / "pooled_kmc_files" / "pooled_case"
+            pool.parent.mkdir(parents=True)
+            for base in (sample, pool):
+                Path(f"{base}.kmc_pre").touch()
+                Path(f"{base}.kmc_suf").touch()
+            env = os.environ.copy()
+            env["KMC_TOOLS_ARGS_LOG"] = str(args_log)
+            result = subprocess.run(
+                [str(ROOT / "bin/update_pool_1.sh"), "--sample-db", str(sample),
+                 "--trait", "case", "--outdir", str(results),
+                 "--kmc-bin", str(bindir), "--threads", "7"],
+                capture_output=True, text=True, env=env, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(args_log.read_text().splitlines()[:2], ["-t7", "simple"])
+            self.assertIn('--threads "${THREADS}"',
+                          (ROOT / "bin/build_groups_1.sh").read_text())
 
 
 class NativeInputTests(unittest.TestCase):

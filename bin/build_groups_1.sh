@@ -218,7 +218,7 @@ merge_and_delete() {
     return
   fi
   info "Merging into pool: ${sid} ${trait}"
-  "${BIN_DIR}/update_pool_1.sh" --sample-db "${db}" --trait "${trait}" --outdir "${RESULTS_DIR}" --kmc-bin "${KMC_BIN}" >> "${LOGFILE}" 2>&1
+  "${BIN_DIR}/update_pool_1.sh" --sample-db "${db}" --trait "${trait}" --outdir "${RESULTS_DIR}" --kmc-bin "${KMC_BIN}" --threads "${THREADS}" >> "${LOGFILE}" 2>&1
   rm -f "${db}.kmc_pre" "${db}.kmc_suf" || true
   rmdir "${db_dir}" 2>/dev/null || true
 }
