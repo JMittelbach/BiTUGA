@@ -934,7 +934,7 @@ fi
 CMD_P5=( python3 "${PASS5_BIN}" --outdir "${OUTDIR}" --metadata "${METADATA}" )
 [[ -n "${FISH_MIN_GLOBAL}" ]] && CMD_P5+=( "--min-global-prev" "${FISH_MIN_GLOBAL}" )
 [[ -n "${FISH_MAX_GLOBAL}" ]] && CMD_P5+=( "--max-global-prev" "${FISH_MAX_GLOBAL}" )
-[[ -n "${FISH_ADAPT}"      ]] && CMD_P5+=( "--adaptive-prev-thresholds" "${FISH_ADAPT}" )
+[[ -n "${FISH_ADAPT}"      ]] && CMD_P5+=( "--adaptive-prev-thresholds-unitig" "${FISH_ADAPT}" )
 [[ -n "${FISH_MIN_DELTA}"  ]] && CMD_P5+=( "--min-delta-prev" "${FISH_MIN_DELTA}" )
 [[ -n "${FISH_MIN_BIAS}"   ]] && CMD_P5+=( "--min-bias-prev" "${FISH_MIN_BIAS}" )
 [[ -n "${FISH_ALPHA}"      ]] && CMD_P5+=( "--alpha" "${FISH_ALPHA}" )
