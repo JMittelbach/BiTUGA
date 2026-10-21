@@ -6,6 +6,10 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import threading
+import time
+from sample_jobs import run_pipeline, run_sample_jobs
 from collections import Counter
 from pathlib import Path
 from datetime import datetime
@@ -16,12 +20,14 @@ def ts():
 
 def make_logger(log_unitig_path: Path):
     log_unitig_path.parent.mkdir(parents=True, exist_ok=True)
+    lock = threading.Lock()
 
     def log(msg: str, to_main: bool = False):
         line = f"[{ts()}] [INFO] {msg}"
-        print(line, flush=True)
-        with log_unitig_path.open("a", encoding="utf-8") as fh:
-            fh.write(line + "\n")
+        with lock:
+            print(line, flush=True)
+            with log_unitig_path.open("a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
     return log
 
 def read_present_count(bin_path: Path) -> int:
@@ -41,6 +47,9 @@ def parse_args():
     p.add_argument("--metadata", default="metadata.tsv")
     p.add_argument("--outdir", default=None)
     p.add_argument("--threads", type=int, default=3)
+    p.add_argument("--sample-jobs", type=int, default=1,
+                   help="Concurrent samples (default 1); share --threads between matchers. "
+                        "Each sample also runs one postprocessor and needs its own RAM.")
     p.add_argument("--carrier-threshold", type=int, default=3)
     p.add_argument("--min-carrier", dest="carrier_threshold", type=int, help=argparse.SUPPRESS)
     p.add_argument("--anchor-bp", type=int, default=12)
@@ -499,6 +508,8 @@ def read_summary_stats(stats_path: Path):
 
 def main():
     args = parse_args()
+    if args.sample_jobs < 1 or args.threads < args.sample_jobs:
+        raise SystemExit("Require 1 <= --sample-jobs <= --threads")
     root_dir = Path(__file__).resolve().parent.parent
 
     if args.outdir is None:
@@ -547,7 +558,7 @@ def main():
         stats.get("max_len") if stats else None,
     )
 
-    threads_eff = min(args.threads, 16)
+    threads_eff = min(args.threads // args.sample_jobs, 16)
 
     if args.short_min_bp is None:
         args.short_min_bp = heur_short_min_bp
@@ -596,6 +607,8 @@ def main():
     log(f"kmer_length\t{args.kmer_length}", to_main=True)
     log(f"min_mem_length\t{args.min_mem_length}", to_main=True)
     log(f"threads\t{threads_eff}", to_main=True)
+    log(f"sample_jobs\t{args.sample_jobs}", to_main=True)
+    log(f"matcher_thread_budget\t{args.threads}", to_main=True)
     log(f"reverse_complement\t{args.reverse_complement}", to_main=True)
     log(f"carrier_threshold\t{args.carrier_threshold}", to_main=True)
     log(f"augment_k_singletons\t{args.augment_k_singletons}", to_main=True)
@@ -669,6 +682,11 @@ def main():
     sorted_ids = sorted(samples.keys())
 
     for sid in sorted_ids:
+        if sid in {".", ".."} or "/" in sid or "\\" in sid or "\0" in sid:
+            raise SystemExit(f"Sample ID is not a safe filename: {sid!r}")
+
+    def process_sample(sid, stop):
+        started = time.monotonic()
         info = samples[sid]
         trait = info["trait"]
         fastqs = info["paths"]
@@ -678,7 +696,7 @@ def main():
 
         if n_fastq == 0:
             log(f"[{sid}] SKIP (no FASTQs)", to_main=True)
-            continue
+            return
 
         present_bin = matcher_dir / f"{sid}.present_unitigs.bin"
 
@@ -729,42 +747,26 @@ def main():
 
         log(f"[{sid}] RUN nt_mini_matcher n_fastq={n_fastq} trait={trait}")
         log(f"[{sid}] RUN postprocessing trait={trait}")
-        p_nt = subprocess.Popen(
-            base_cmd_nt,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=matcher_dir,
-            bufsize=0,
-        )
-        p_post = subprocess.Popen(base_cmd_post, stdin=p_nt.stdout, cwd=matcher_dir)
-        if p_nt.stdout is not None:
-            p_nt.stdout.close()
-
-        post_rc = p_post.wait()
-        stderr_nt = ""
-        if p_nt.stderr is not None:
+        # Worker-specific temporary files; publish only after both children succeed.
+        with tempfile.TemporaryDirectory(prefix="sample-", dir=matcher_dir) as work:
+            partial = Path(work) / "present.bin"
+            base_cmd_post[3] = str(partial)
             try:
-                stderr_nt = p_nt.stderr.read().decode(errors="ignore").strip()
-            except Exception:
-                stderr_nt = ""
-        nt_rc = p_nt.wait()
-
-        if nt_rc != 0:
-            msg = f"nt_mini_matcher failed for {sid} with exit code {nt_rc}"
-            if stderr_nt:
-                msg += f" (stderr: {stderr_nt})"
-            raise SystemExit(msg)
-        if post_rc != 0:
-            raise SystemExit(
-                f"postprocess_minimatcher failed for {sid} "
-                f"with exit code {post_rc}"
-            )
+                run_pipeline(base_cmd_nt, base_cmd_post, work, stop)
+                if not partial.is_file() or partial.stat().st_size < 4:
+                    raise RuntimeError("Missing or truncated presence output")
+                partial.replace(present_bin)
+            except Exception as exc:
+                raise RuntimeError(f"Sample {sid}: {exc}") from exc
         count_present = read_present_count(present_bin)
         log(
             f"[{sid}] PRESENT_UNITIGS\t{count_present}",
             to_main=True,
         )
         log(f"[{sid}] DONE", to_main=True)
+        log(f"[{sid}] ELAPSED_SECONDS\t{time.monotonic() - started:.3f}", to_main=True)
+
+    run_sample_jobs(sorted_ids, process_sample, args.sample_jobs)
 
     presence_table = results_dir / "unitig_presence.tsv"
     matches_stats = stats_dir / "unitig_matches.txt"

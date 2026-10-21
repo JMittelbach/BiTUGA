@@ -1206,15 +1206,18 @@ static void iterate_over_queryfiles_generic(
         }
         const size_t units_to_process
           = read_pairs_option ? (query_files.size()/2) : query_files.size();
-        if (guide_params.query_split_size_get() > 0 && units_to_process == 1)
+        // The paired generator accepts alternating R1/R2 files from multiple
+        // lanes and maintains sequence offsets across the complete stream.
+        if (guide_params.query_split_size_get() > 0 &&
+            (units_to_process == 1 || read_pairs_option))
         {
-          assert (query_files.size() == 1 or query_files.size() == 2);
+          assert (read_pairs_option || query_files.size() == 1);
 #define WITH_MULTISEQ_GENERATOR
 #ifdef WITH_MULTISEQ_GENERATOR
           const size_t max_size_of_queue
             = guide_params.thread_pool_max_size_get();
           const size_t max_num_sequences = guide_params.query_split_size_get();
-          (query_files.size() == 2
+          (read_pairs_option
             ? threaded_match_query_against_reference
                 <GttlFastQGenerator<buf_size>,
                  true,
@@ -1283,8 +1286,7 @@ static void iterate_over_queryfiles_generic(
                             var_ref_idx);
           delete multiseq_factory_ptr;
 #endif
-        } else /* guide_params.query_split_size_get() == 0 or
-                  units_to_process > 1 */
+        } else /* no batching, or multiple unpaired input files */
         {
           if (guide_params.number_of_threads_get() > units_to_process)
           {

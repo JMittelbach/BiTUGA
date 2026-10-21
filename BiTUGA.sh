@@ -54,6 +54,7 @@ Usage:
     [--kmc-bin <dir>] \
     [--k <int>] [--ci <int>] [--cx <int>] \
     [--threads <int>] [--mem-gb <int>] \
+    [--sample-jobs <int>] [--nt-threads <int>] \
     [--prev-min <float>] [--prev-max <float>] \
     [--group-min <float>] [--group-max <float>] \
     [--perfect-only] [--perfect-extra] \
@@ -105,7 +106,8 @@ Argument groups:
     --augment-singleton-unitigs off         Keep all unitigs (no length filter, min_mem=k) and append k-length unitigs from candidate_kmers
 
   Step IV — nt_mini_matcher:
-    --nt-threads          (threads)         Threads for nt_mini_matcher (default = --threads, capped at 16)
+    --sample-jobs         1                 Concurrent samples; split --nt-threads between matchers (RAM grows per sample)
+    --nt-threads          (threads)         Matcher thread budget; divided by sample-jobs, max 16 per matcher
     --min-carrier         3                 Min carriers to mark unitig present (scale with expected coverage)
     --anchor-bp           12                Anchor size for MEM stitching
     --query-split-size    262144            Max reads per batch (nt_mini_matcher default; override with care)
@@ -127,6 +129,22 @@ Argument groups:
     --long-min-segment    auto              Min segment len (long; auto from unitig lengths; override requires setting all classes explicitly)
     --min-bridging-pairs  2                 Min read pairs to bridge gaps
     --full-gapless-long   off               Enable gapless mode for long unitigs
+
+  Pass IV parallel execution (opt-in):
+    Default: --sample-jobs 1 processes one sample at a time.
+    Example: --sample-jobs 2 --nt-threads 16 runs up to two samples,
+             each with eight matcher threads and one postprocessing process.
+    Matcher threads per sample = min(16, floor(nt-threads / sample-jobs)).
+    Without --nt-threads, the matcher budget is min(--threads, 12).
+    sample-jobs must be positive and must not exceed the matcher budget.
+    Postprocessing and input/output may use additional CPU time; nt-threads
+    is a matcher budget, not a hard CPU limit for all processes combined.
+    Each concurrent sample needs its own RAM and temporary disk space.
+    --mem-gb limits KMC only; it does not cap Pass IV memory usage.
+    With paired reads, query splitting also supports multiple lane pairs.
+    Samples are merged only after all jobs succeed; a job failure cancels
+    active peers and prevents the final merge. Incomplete sample outputs
+    are not published as successful outputs.
 
   Step V — Fisher tests:
     --fisher-min-global-prev 0.10           Min global prevalence fraction to test unitig (overrides adaptive)
@@ -161,6 +179,7 @@ HOMO_OFF="0"
 ENTROPY_UNITIG=""
 METADATA_SET="0"
 NT_THREADS=""
+P4_SAMPLE_JOBS="1"
 P4_CARRIER=""
 P4_ANCHOR=""
 P4_QSPLIT=""
@@ -294,6 +313,7 @@ while [[ $# -gt 0 ]]; do
     --max-replicate-ref) P4_MAXREP_REF="$2"; shift 2;;
     --max-replicate-qry) P4_MAXREP_QRY="$2"; shift 2;;
     --nt-threads) NT_THREADS="$2"; shift 2;;
+    --sample-jobs) P4_SAMPLE_JOBS="$2"; shift 2;;
     --carrier-threshold) P4_CARRIER="$2"; shift 2;;
     --min-carrier) P4_CARRIER="$2"; shift 2;;
     --anchor-bp) P4_ANCHOR="$2"; shift 2;;
@@ -356,6 +376,7 @@ fi
 # Argument validation
 [[ -n "${THREADS}"    ]] && validate_int_min "threads" "${THREADS}" 1
 [[ -n "${NT_THREADS}" ]] && validate_int_min "nt-threads" "${NT_THREADS}" 1
+validate_int_min "sample-jobs" "${P4_SAMPLE_JOBS}" 1
 if [[ -n "${MEM_GB}" ]]; then
   validate_int_min "mem-gb" "${MEM_GB}" 1
   if (( MEM_GB > 1024 )); then
@@ -729,6 +750,10 @@ else
   if [[ "${NT_THREADS_EFF}" -gt 12 ]]; then NT_THREADS_EFF=12; fi
 fi
 P4_QSPLIT_EFF="${P4_QSPLIT:-${QSPLIT_DEFAULT}}"
+if (( P4_SAMPLE_JOBS > NT_THREADS_EFF )); then
+  echo "[ERR] --sample-jobs must not exceed the matcher thread budget (--nt-threads)" >&2
+  exit 1
+fi
 P4_MINMEM_EFF="${P4_MINMEM:-$((K_EFF + 1))}"
 if [[ -z "${P4_MINMEM:-}" && "${P4_AUG_SINGLE}" == "1" ]]; then
   P4_MINMEM_EFF="${K_EFF}"
@@ -871,6 +896,7 @@ else
 fi
 
 CMD_P4=( python3 "${PASS4_BIN}" --outdir "${OUTDIR}" --metadata "${METADATA}" --threads "${NT_THREADS_EFF}" )
+CMD_P4+=( --sample-jobs "${P4_SAMPLE_JOBS}" )
 [[ -n "${P4_CARRIER}"    ]] && CMD_P4+=( "--carrier-threshold" "${P4_CARRIER}" )
 [[ -n "${P4_ANCHOR}"     ]] && CMD_P4+=( "--anchor-bp" "${P4_ANCHOR}" )
 CMD_P4+=( "--query-split-size" "${P4_QSPLIT_EFF}" )
